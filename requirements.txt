@@ -13,3 +13,4 @@ scipy==1.11.4
 sentencepiece==0.1.99
 protobuf==4.25.0
 qwen-vl-utils 
+# Updated PyTorch version for compatibility with transformers
