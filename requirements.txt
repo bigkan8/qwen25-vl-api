@@ -10,7 +10,6 @@ bitsandbytes==0.41.1
 accelerate==0.25.0
 optimum==1.14.0
 scipy==1.11.4
-huggingface-hub==0.24.1
 sentencepiece==0.1.99
 protobuf==4.25.0
 qwen-vl-utils 
