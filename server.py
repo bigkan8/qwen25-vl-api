@@ -17,7 +17,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import torch
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM, TextIteratorStreamer
+from transformers import AutoProcessor, TextIteratorStreamer
+# Import the specific model class for Qwen2.5-VL
+try:
+    from transformers import Qwen2VLForConditionalGeneration
+except ImportError:
+    # Fallback to AutoModelForCausalLM if the specific class isn't available
+    from transformers import AutoModelForCausalLM
+    Qwen2VLForConditionalGeneration = AutoModelForCausalLM
 import uvicorn
 import threading
 
@@ -93,7 +100,7 @@ def load_model():
             load_kwargs["torch_dtype"] = torch.float16
         
         # Load model
-        model = AutoModelForCausalLM.from_pretrained(
+        model = Qwen2VLForConditionalGeneration.from_pretrained(
             MODEL_ID,
             device_map=DEVICE,
             **load_kwargs
