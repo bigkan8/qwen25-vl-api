@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: qwen-vl-api
+    env: python
+    plan: pro
+    region: ohio
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    healthCheckPath: /health
+    envVars:
+      - key: MODEL_ID
+        value: Qwen/Qwen2.5-VL-7B-Instruct
+      - key: USE_INT8
+        value: true
+      - key: DEVICE
+        value: cpu
+      - key: MAX_NEW_TOKENS
+        value: 1024
+      - key: PORT
+        value: 8080
+      - key: PYTHONUNBUFFERED
+        value: true
+    autoDeploy: false
+    disk:
+      name: qwen-model-cache
+      mountPath: /root/.cache
+      sizeGB: 50 
