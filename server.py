@@ -40,7 +40,9 @@ MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen2.5-VL-7B-Instruct")
 DEVICE = os.environ.get("DEVICE", "cpu")
 USE_INT8 = os.environ.get("USE_INT8", "true").lower() == "true"
 USE_FLOAT16 = os.environ.get("USE_FLOAT16", "false").lower() == "true"
+USE_4BIT = os.environ.get("USE_4BIT", "true").lower() == "true"  # New option for 4-bit quantization
 MAX_NEW_TOKENS = int(os.environ.get("MAX_NEW_TOKENS", "1024"))
+MODEL_LOADED = False  # Flag to track if model is loaded
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -82,7 +84,11 @@ class AnalyzeScreenRequest(BaseModel):
 
 def load_model():
     """Load the Qwen VL model and processor"""
-    global model, processor
+    global model, processor, MODEL_LOADED
+    
+    # If model is already loaded, don't reload
+    if MODEL_LOADED and model is not None and processor is not None:
+        return True
     
     try:
         logger.info(f"Loading Qwen VL model from {MODEL_ID} on {DEVICE}")
@@ -98,14 +104,27 @@ def load_model():
         # Use AutoModelForVision2Seq for vision-language models
         logger.info("Loading model with AutoModelForVision2Seq")
         
+        # Configure quantization for reduced memory usage
+        quantization_config = None
+        if USE_4BIT:
+            logger.info("Using 4-bit quantization to reduce memory usage")
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4"
+            )
+        
         model = AutoModelForVision2Seq.from_pretrained(
             MODEL_ID,
             revision="refs/pr/24",  # Specific revision known to work with this model
             trust_remote_code=True,  # Important for Qwen models
-            device_map="auto"        # Let transformers decide the best way to map
+            device_map="auto",      # Let transformers decide the best way to map
+            quantization_config=quantization_config
         )
         
         logger.info("Model loaded successfully")
+        MODEL_LOADED = True
         return True
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}")
@@ -151,8 +170,10 @@ def format_parsed_content(parsed_content):
 @app.on_event("startup")
 async def startup_event():
     """Initialize the model when the server starts"""
-    background_tasks = BackgroundTasks()
-    background_tasks.add_task(load_model)
+    # We'll now load the model on-demand instead of at startup
+    # This prevents the service from failing if the model can't be loaded immediately
+    logger.info("Server starting up - will load model on first request")
+    pass  # Don't load the model at startup
 
 @app.get("/")
 async def root():
@@ -186,6 +207,18 @@ async def health_check():
 @app.post("/analyze")
 async def analyze_image(request: AnalyzeImageRequest):
     """Analyze an image using Qwen VL model"""
+    global model, processor
+    
+    # Lazy-load the model on first request if not already loaded
+    if model is None or processor is None:
+        logger.info("Lazy-loading model on first request")
+        success = load_model()
+        if not success:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to load model. Please check the service logs."
+            )
+    
     if model is None:
         raise HTTPException(
             status_code=503,
@@ -280,6 +313,18 @@ async def analyze_image(request: AnalyzeImageRequest):
 @app.post("/analyze_screen")
 async def analyze_screen(request: AnalyzeScreenRequest):
     """Analyze a screen with parsed elements"""
+    global model, processor
+    
+    # Lazy-load the model on first request if not already loaded
+    if model is None or processor is None:
+        logger.info("Lazy-loading model on first request")
+        success = load_model()
+        if not success:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to load model. Please check the service logs."
+            )
+    
     if model is None:
         raise HTTPException(
             status_code=503,
