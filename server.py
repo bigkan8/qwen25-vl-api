@@ -20,11 +20,11 @@ from PIL import Image
 from transformers import AutoProcessor, TextIteratorStreamer, BitsAndBytesConfig
 # Import the specific model class for Qwen2.5-VL
 try:
-    from transformers import Qwen2VLForConditionalGeneration
+    from transformers import AutoModelForVision2Seq
 except ImportError:
     # Fallback to AutoModelForCausalLM if the specific class isn't available
     from transformers import AutoModelForCausalLM
-    Qwen2VLForConditionalGeneration = AutoModelForCausalLM
+    AutoModelForVision2Seq = AutoModelForCausalLM
 import uvicorn
 import threading
 
@@ -88,15 +88,19 @@ def load_model():
         logger.info(f"Loading Qwen VL model from {MODEL_ID} on {DEVICE}")
         
         # Load processor first
-        processor = AutoProcessor.from_pretrained(MODEL_ID)
+        processor = AutoProcessor.from_pretrained(
+            MODEL_ID,
+            revision="refs/pr/24",  # Specific revision known to work with this model
+            trust_remote_code=True
+        )
         logger.info("Processor loaded successfully")
         
-        # Most basic, reliable way to load Qwen models
-        logger.info("Loading model with AutoModelForCausalLM")
-        from transformers import AutoModelForCausalLM
+        # Use AutoModelForVision2Seq for vision-language models
+        logger.info("Loading model with AutoModelForVision2Seq")
         
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModelForVision2Seq.from_pretrained(
             MODEL_ID,
+            revision="refs/pr/24",  # Specific revision known to work with this model
             trust_remote_code=True,  # Important for Qwen models
             device_map="auto"        # Let transformers decide the best way to map
         )
