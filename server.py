@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import torch
 from PIL import Image
-from transformers import AutoProcessor, TextIteratorStreamer
+from transformers import AutoProcessor, TextIteratorStreamer, BitsAndBytesConfig
 # Import the specific model class for Qwen2.5-VL
 try:
     from transformers import Qwen2VLForConditionalGeneration
@@ -94,17 +94,37 @@ def load_model():
         load_kwargs = {}
         if USE_INT8:
             logger.info("Using 8-bit quantization")
-            load_kwargs["load_in_8bit"] = True
+            quantization_config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_enable_fp32_cpu_offload=True
+            )
+            load_kwargs["quantization_config"] = quantization_config
         elif USE_FLOAT16 and DEVICE == "cuda":
             logger.info("Using float16 precision")
             load_kwargs["torch_dtype"] = torch.float16
         
-        # Load model
-        model = Qwen2VLForConditionalGeneration.from_pretrained(
-            MODEL_ID,
-            device_map=DEVICE,
-            **load_kwargs
-        )
+        # Add trust_remote_code for all loading methods
+        load_kwargs["trust_remote_code"] = True
+        
+        # Try different model loading approaches
+        try:
+            # First try using AutoModelForCausalLM which is more flexible
+            logger.info("Attempting to load model with AutoModelForCausalLM")
+            from transformers import AutoModelForCausalLM
+            model = AutoModelForCausalLM.from_pretrained(
+                MODEL_ID,
+                device_map=DEVICE,
+                **load_kwargs
+            )
+        except Exception as e1:
+            logger.warning(f"Failed to load with AutoModelForCausalLM: {str(e1)}")
+            # Try with the specific class
+            logger.info("Attempting to load model with Qwen2VLForConditionalGeneration")
+            model = Qwen2VLForConditionalGeneration.from_pretrained(
+                MODEL_ID, 
+                device_map=DEVICE,
+                **load_kwargs
+            )
         
         logger.info("Model loaded successfully")
         return True
