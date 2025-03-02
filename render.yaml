@@ -20,6 +20,8 @@ services:
         value: 8080
       - key: PYTHONUNBUFFERED
         value: true
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=4096
     autoDeploy: true
     disk:
       name: qwen-model-cache

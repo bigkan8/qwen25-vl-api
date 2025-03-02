@@ -90,10 +90,11 @@ def load_model():
         # Load processor
         processor = AutoProcessor.from_pretrained(MODEL_ID)
         
-        # Determine precision settings - DISABLE 8-bit quantization
+        # For CPU loading, we need to avoid device_map and handle loading differently
         load_kwargs = {
             "trust_remote_code": True,
-            "device_map": DEVICE
+            # Don't use device_map for CPU loading to avoid meta tensor errors
+            "low_cpu_mem_usage": True
         }
         
         if USE_FLOAT16 and DEVICE == "cuda":
@@ -107,6 +108,11 @@ def load_model():
             MODEL_ID,
             **load_kwargs
         )
+        
+        # Move to device after loading
+        if DEVICE == "cpu":
+            logger.info("Moving model to CPU")
+            model = model.to("cpu")
         
         logger.info("Model loaded successfully")
         return True
