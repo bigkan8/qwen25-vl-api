@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import torch
 from PIL import Image
-from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration, TextIteratorStreamer
+from transformers import AutoProcessor, AutoModelForCausalLM, TextIteratorStreamer
 import uvicorn
 import threading
 
@@ -93,7 +93,7 @@ def load_model():
             load_kwargs["torch_dtype"] = torch.float16
         
         # Load model
-        model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
             device_map=DEVICE,
             **load_kwargs
