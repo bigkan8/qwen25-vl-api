@@ -87,37 +87,25 @@ def load_model():
     try:
         logger.info(f"Loading Qwen VL model from {MODEL_ID} on {DEVICE}")
         
-        # Load processor
+        # Load processor first
         processor = AutoProcessor.from_pretrained(MODEL_ID)
+        logger.info("Processor loaded successfully")
         
-        # For CPU loading, we need to avoid device_map and handle loading differently
-        load_kwargs = {
-            "trust_remote_code": True,
-            # Don't use device_map for CPU loading to avoid meta tensor errors
-            "low_cpu_mem_usage": True
-        }
+        # Most basic, reliable way to load Qwen models
+        logger.info("Loading model with AutoModelForCausalLM")
+        from transformers import AutoModelForCausalLM
         
-        if USE_FLOAT16 and DEVICE == "cuda":
-            logger.info("Using float16 precision")
-            load_kwargs["torch_dtype"] = torch.float16
-        
-        logger.info("Attempting to load model with AutoModel.from_pretrained")
-        from transformers import AutoModel
-        # Generic auto model which works with any model type
-        model = AutoModel.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
-            **load_kwargs
+            trust_remote_code=True,  # Important for Qwen models
+            device_map="auto"        # Let transformers decide the best way to map
         )
-        
-        # Move to device after loading
-        if DEVICE == "cpu":
-            logger.info("Moving model to CPU")
-            model = model.to("cpu")
         
         logger.info("Model loaded successfully")
         return True
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}")
+        # Allow server to start anyway so we can investigate/debug through API
         return False
 
 def process_image(image_data=None, image_url=None):
@@ -170,41 +158,49 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    global model, processor
-    
-    if model is None or processor is None:
-        return {"status": "loading", "message": "Model is still loading"}
-    
-    return {"status": "healthy", "model_id": MODEL_ID}
+    if model is None:
+        # Model failed to load but server is running
+        return JSONResponse(
+            status_code=503,  # Service Unavailable
+            content={
+                "status": "unavailable", 
+                "message": "Model not loaded. Check logs for details.",
+                "model_id": MODEL_ID,
+                "processor_loaded": processor is not None
+            }
+        )
+    else:
+        # Everything is working
+        return JSONResponse(
+            content={
+                "status": "healthy",
+                "model_id": MODEL_ID,
+                "device": DEVICE
+            }
+        )
 
 @app.post("/analyze")
 async def analyze_image(request: AnalyzeImageRequest):
-    """Analyze an image with custom prompts"""
-    global model, processor
-    
-    if model is None or processor is None:
-        raise HTTPException(status_code=503, detail="Model is still loading. Please try again later.")
+    """Analyze an image using Qwen VL model"""
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model is not loaded. Please check the service logs."
+        )
     
     try:
-        start_time = time.time()
-        
-        # Process image
-        image = None
+        # Get image from base64 data or URL
         if request.image_data:
             image = process_image(image_data=request.image_data)
         elif request.image_url:
             image = process_image(image_url=request.image_url)
         else:
-            # Check if image is in messages
-            for message in request.messages:
-                if isinstance(message.content, list):
-                    for content in message.content:
-                        if content.get("type") == "image" and "image_url" in content:
-                            image = process_image(image_url=content["image_url"])
-                            break
+            raise HTTPException(
+                status_code=400,
+                detail="Either image_data or image_url must be provided"
+            )
         
-        if image is None:
-            raise HTTPException(status_code=400, detail="No image provided")
+        start_time = time.time()
         
         # Prepare messages for the model
         messages = []
@@ -279,17 +275,20 @@ async def analyze_image(request: AnalyzeImageRequest):
 
 @app.post("/analyze_screen")
 async def analyze_screen(request: AnalyzeScreenRequest):
-    """Analyze a screen with parsed elements from OmniParser"""
-    global model, processor
-    
-    if model is None or processor is None:
-        raise HTTPException(status_code=503, detail="Model is still loading. Please try again later.")
+    """Analyze a screen with parsed elements"""
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model is not loaded. Please check the service logs."
+        )
     
     try:
-        start_time = time.time()
-        
         # Process image
         image = process_image(image_data=request.image_data)
+        if image is None:
+            raise HTTPException(status_code=400, detail="Invalid image data")
+        
+        start_time = time.time()
         
         # Format parsed content
         parsed_content_text = format_parsed_content(request.parsed_content)
