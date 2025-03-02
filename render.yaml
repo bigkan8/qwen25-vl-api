@@ -11,7 +11,7 @@ services:
       - key: MODEL_ID
         value: Qwen/Qwen2.5-VL-7B-Instruct
       - key: USE_INT8
-        value: true
+        value: false
       - key: DEVICE
         value: cpu
       - key: MAX_NEW_TOKENS

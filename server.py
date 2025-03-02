@@ -90,41 +90,23 @@ def load_model():
         # Load processor
         processor = AutoProcessor.from_pretrained(MODEL_ID)
         
-        # Determine quantization and precision settings
-        load_kwargs = {}
-        if USE_INT8:
-            logger.info("Using 8-bit quantization")
-            quantization_config = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_enable_fp32_cpu_offload=True
-            )
-            load_kwargs["quantization_config"] = quantization_config
-        elif USE_FLOAT16 and DEVICE == "cuda":
+        # Determine precision settings - DISABLE 8-bit quantization
+        load_kwargs = {
+            "trust_remote_code": True,
+            "device_map": DEVICE
+        }
+        
+        if USE_FLOAT16 and DEVICE == "cuda":
             logger.info("Using float16 precision")
             load_kwargs["torch_dtype"] = torch.float16
         
-        # Add trust_remote_code for all loading methods
-        load_kwargs["trust_remote_code"] = True
-        
-        # Try different model loading approaches
-        try:
-            # First try using AutoModelForCausalLM which is more flexible
-            logger.info("Attempting to load model with AutoModelForCausalLM")
-            from transformers import AutoModelForCausalLM
-            model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
-                device_map=DEVICE,
-                **load_kwargs
-            )
-        except Exception as e1:
-            logger.warning(f"Failed to load with AutoModelForCausalLM: {str(e1)}")
-            # Try with the specific class
-            logger.info("Attempting to load model with Qwen2VLForConditionalGeneration")
-            model = Qwen2VLForConditionalGeneration.from_pretrained(
-                MODEL_ID, 
-                device_map=DEVICE,
-                **load_kwargs
-            )
+        logger.info("Attempting to load model with AutoModel.from_pretrained")
+        from transformers import AutoModel
+        # Generic auto model which works with any model type
+        model = AutoModel.from_pretrained(
+            MODEL_ID,
+            **load_kwargs
+        )
         
         logger.info("Model loaded successfully")
         return True
