@@ -37,10 +37,17 @@ logger = logging.getLogger("QwenVL-API")
 
 # Model configuration
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen2.5-VL-3B-Instruct")
+print(f"DEBUG: MODEL_ID from environment or default: {MODEL_ID}")
 DEVICE = os.environ.get("DEVICE", "cpu")
 USE_INT8 = os.environ.get("USE_INT8", "true").lower() == "true"
 USE_FLOAT16 = os.environ.get("USE_FLOAT16", "false").lower() == "true"
 MAX_NEW_TOKENS = int(os.environ.get("MAX_NEW_TOKENS", "1024"))
+
+# For debug purposes, print all environment variables
+print("DEBUG: All environment variables:")
+for key, value in os.environ.items():
+    if "MODEL" in key or "QWEN" in key:
+        print(f"  {key}: {value}")
 
 # Initialize FastAPI app
 app = FastAPI(

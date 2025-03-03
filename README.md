@@ -1,6 +1,6 @@
 # Qwen2.5-VL API for Render
 
-This repository contains code to deploy the Qwen2.5-VL-7B-Instruct model on Render as an API service. This allows you to run image analysis and screen parsing without having to run the model locally.
+This repository contains code to deploy the Qwen2.5-VL-3B-Instruct model on Render as an API service. This allows you to run image analysis and screen parsing without having to run the model locally.
 
 ## Features
 
@@ -40,7 +40,7 @@ This repository contains code to deploy the Qwen2.5-VL-7B-Instruct model on Rend
 
 The deployment can be configured using environment variables:
 
-- `MODEL_ID`: The Hugging Face model ID (default: `Qwen/Qwen2.5-VL-7B-Instruct`)
+- `MODEL_ID`: The Hugging Face model ID (default: `Qwen/Qwen2.5-VL-3B-Instruct`)
 - `DEVICE`: Device to run the model on (default: `cpu`)
 - `USE_INT8`: Whether to use 8-bit quantization (default: `true`)
 - `USE_FLOAT16`: Whether to use float16 precision (default: `false`)

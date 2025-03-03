@@ -35,7 +35,7 @@ This document provides step-by-step instructions for deploying the Qwen2.5-VL AP
    - **Plan**: Pro (at least 8 GB RAM needed)
 
 7. Scroll down to "Advanced" and add the following environment variables:
-   - `MODEL_ID`: `Qwen/Qwen2.5-VL-7B-Instruct`
+   - `MODEL_ID`: `Qwen/Qwen2.5-VL-3B-Instruct`
    - `USE_INT8`: `true`
    - `DEVICE`: `cpu`
    - `MAX_NEW_TOKENS`: `1024`
@@ -70,7 +70,7 @@ If you need to access the API from different domains:
 2. Test the health endpoint: `https://your-service-name.onrender.com/health`
 3. You should see a response like:
    ```json
-   {"status": "healthy", "model_id": "Qwen/Qwen2.5-VL-7B-Instruct"}
+   {"status": "healthy", "model_id": "Qwen/Qwen2.5-VL-3B-Instruct"}
    ```
 
 ## Step 6: Update VerifiedX to Use the API
@@ -91,4 +91,4 @@ If you need to access the API from different domains:
 - **Memory Issues**: If you see out-of-memory errors, make sure you've selected the Pro plan and added the persistent disk.
 - **Slow Model Loading**: The first request will take time as the model is loaded. Subsequent requests will be faster.
 - **Network Errors**: Check that the API URL is correct and the service is running.
-- **API Authentication**: If you need to add authentication, modify the `server.py` file to include an API key check. 
+- **API Authentication**: If you need to add authentication, modify the `server.py` file to include an API key check.
