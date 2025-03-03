@@ -97,7 +97,6 @@ def load_model():
         # Load processor first
         processor = AutoProcessor.from_pretrained(
             MODEL_ID,
-            revision="refs/pr/24",  # Specific revision known to work with this model
             trust_remote_code=True
         )
         logger.info("Processor loaded successfully")
@@ -107,7 +106,6 @@ def load_model():
         
         model = AutoModelForVision2Seq.from_pretrained(
             MODEL_ID,
-            revision="refs/pr/24",  # Specific revision known to work with this model
             trust_remote_code=True,  # Important for Qwen models
             device_map="auto"        # Let transformers decide the best way to map
         )
