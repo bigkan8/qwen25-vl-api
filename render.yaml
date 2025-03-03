@@ -9,7 +9,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: MODEL_ID
-        value: Qwen/Qwen2.5-VL-7B-Instruct
+        value: Qwen/Qwen2.5-VL-3B-Instruct
       - key: USE_INT8
         value: false
       - key: DEVICE
